@@ -1,0 +1,23 @@
+{
+  "name": "playwright-training",
+  "version": "1.0.0",
+  "private": true,
+  "description": "OrangeHRM Playwright TypeScript POM framework with Excel-driven execution",
+  "scripts": {
+    "test:flow": "playwright test tests/adminSearch.spec.ts --project=edge --grep \"TC_001|TC_002|TC_003\"",
+    "test:headed": "playwright test --headed",
+    "test:headless": "playwright test --headless",
+    "test:edge": "playwright test --project=edge",
+    "test:admin": "playwright test tests/adminSearch.spec.ts --project=edge",
+    "exec:config": "ts-node scripts/runByConfig.ts",
+    "report:open": "playwright show-report reports/html"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^22.12.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3",
+    "xlsx": "^0.18.5"
+  }
+}
+

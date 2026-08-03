@@ -1,0 +1,18 @@
+{
+  "mode": "selectedTCIDs",
+  "selectedTCIDs": [
+    "TC_004",
+    "TC_005"
+  ],
+  "targetBrowsers": [
+    "edge"
+  ],
+  "selectedGroups": [
+    "smoke",
+    "regression",
+    "admin",
+    "login",
+    "qaplayground"
+  ]
+}
+

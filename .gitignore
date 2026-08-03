@@ -1,0 +1,13 @@
+node_modules/
+playwright-report/
+reports/artifacts/
+reports/blob/
+reports/html/
+test-results/
+dist/
+.env
+.env.*
+!.env.example
+playwright/.auth/
+*.storageState.json
+

@@ -1,0 +1,15 @@
+[
+  {
+    "key": "validAdmin",
+    "username": "Admin",
+    "password": "admin123",
+    "description": "Valid OrangeHRM demo credentials"
+  },
+  {
+    "key": "invalidAdmin",
+    "username": "Admin",
+    "password": "invalidPass",
+    "description": "Invalid credentials for negative login"
+  }
+]
+
