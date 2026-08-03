@@ -10,7 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      QA_PLAYGROUND_URL: ${{ vars.QA_PLAYGROUND_URL }}
+      QA_PLAYGROUND_URL: ${{ vars.QA_PLAYGROUND_URL || 'https://qaplayground.dev/apps/popup/' }}
 
     steps:
       - name: Checkout code

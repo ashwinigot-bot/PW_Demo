@@ -12,7 +12,8 @@ export class QaPlaygroundPage extends BasePage {
   }
 
   async openPopupScenario(): Promise<void> {
-    await this.navigateTo(process.env.QA_PLAYGROUND_URL ?? 'https://qaplayground.dev/apps/popup/');
+    const qaPlaygroundUrl = process.env.QA_PLAYGROUND_URL?.trim() || 'https://qaplayground.dev/apps/popup/';
+    await this.navigateTo(qaPlaygroundUrl);
     await this.waitForVisible(this.openPopupLink);
   }
 
