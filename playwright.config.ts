@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
 
 const useBlobReporter = process.env.PW_REPORTER === 'blob';

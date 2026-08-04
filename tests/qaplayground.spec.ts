@@ -4,6 +4,10 @@ test.describe('QA Playground Advanced UI', () => {
   test('[TC_005] @regression @qaplayground Popup handling should update parent window', async ({ qaPlaygroundPage }) => {
     await qaPlaygroundPage.openPopupScenario();
     await qaPlaygroundPage.verifyPopupFlow();
+
+    if ((process.env.FORCE_JIRA_FAILURE ?? '').toLowerCase() === 'true') {
+      throw new Error('Intentional failure for Jira bug creation validation.');
+    }
   });
 });
 
