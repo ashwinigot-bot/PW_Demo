@@ -3,6 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const useBlobReporter = process.env.PW_REPORTER === 'blob';
 const defaultRunId = new Date().toISOString().replace(/[:.]/g, '-');
 const runId = process.env.PW_RUN_ID ?? defaultRunId;
+const jiraReporter: [string] = ['./reporters/JiraFailureReporter.ts'];
 
 export default defineConfig({
   testDir: './tests',
@@ -17,11 +18,13 @@ export default defineConfig({
   reporter: useBlobReporter
     ? [
         ['list'],
-        ['blob', { outputDir: process.env.PW_BLOB_DIR ?? 'reports/blob/default' }]
+        ['blob', { outputDir: process.env.PW_BLOB_DIR ?? 'reports/blob/default' }],
+        jiraReporter
       ]
     : [
         ['list'],
-        ['html', { outputFolder: 'reports/html', open: 'never' }]
+        ['html', { outputFolder: 'reports/html', open: 'never' }],
+        jiraReporter
       ],
   use: {
     baseURL: 'https://opensource-demo.orangehrmlive.com',

@@ -12,6 +12,14 @@ jobs:
     env:
       NPM_CONFIG_PRODUCTION: "false"
       QA_PLAYGROUND_URL: ${{ vars.QA_PLAYGROUND_URL || 'https://qaplayground.dev/apps/popup/' }}
+      JIRA_ENABLED: "true"
+      JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+      JIRA_ISSUE_TYPE: ${{ vars.JIRA_ISSUE_TYPE || 'Bug' }}
+      JIRA_PARENT_ISSUE_KEY: ${{ vars.JIRA_PARENT_ISSUE_KEY }}
+      JIRA_ASSIGNEE_ACCOUNT_ID: ${{ vars.JIRA_ASSIGNEE_ACCOUNT_ID }}
 
     steps:
       - name: Checkout code
