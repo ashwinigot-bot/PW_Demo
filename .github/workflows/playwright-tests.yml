@@ -20,6 +20,7 @@ jobs:
       JIRA_ISSUE_TYPE: ${{ vars.JIRA_ISSUE_TYPE || 'Bug' }}
       JIRA_PARENT_ISSUE_KEY: ${{ vars.JIRA_PARENT_ISSUE_KEY }}
       JIRA_ASSIGNEE_ACCOUNT_ID: ${{ vars.JIRA_ASSIGNEE_ACCOUNT_ID }}
+      FORCE_JIRA_FAILURE: ${{ vars.FORCE_JIRA_FAILURE || 'false' }}
 
     steps:
       - name: Checkout code
