@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
+      NPM_CONFIG_PRODUCTION: "false"
       QA_PLAYGROUND_URL: ${{ vars.QA_PLAYGROUND_URL || 'https://qaplayground.dev/apps/popup/' }}
 
     steps:
@@ -19,18 +20,60 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          echo "Node: $(node -v)"
+          echo "npm: $(npm -v)"
+          npm install -g npm@9 || true
+          echo "npm after optional pin: $(npm -v)"
+
+          if [ -f package-lock.json ]; then
+            install_cmd="npm ci --prefer-offline --no-audit --progress=false"
+          else
+            install_cmd="npm install --prefer-offline --no-audit --progress=false"
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Attempt ${attempt}: ${install_cmd}"
+            if ${install_cmd}; then
+              echo "Dependency install succeeded"
+              exit 0
+            fi
+
+            echo "Dependency install failed on attempt ${attempt}"
+            if [ "${attempt}" -lt 3 ]; then
+              sleep 5
+            fi
+          done
+
+          echo "Dependency install failed after retries"
+          ls -la /home/runner/.npm/_logs || true
+          exit 1
+        env:
+          CI: true
+
+      - name: Upload npm debug logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs
+          if-no-files-found: warn
+
+      - name: Verify local Playwright dependency
+        run: |
+          npm ls @playwright/test
+          npm exec playwright -- --version
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npm exec playwright -- install --with-deps chromium
 
       - name: Run QA Playground test
-        run: npx playwright test tests/qaplayground.spec.ts --project=chrome
+        run: npm exec playwright -- test tests/qaplayground.spec.ts --project=chrome
 
       - name: Upload Playwright HTML report
         if: always()
