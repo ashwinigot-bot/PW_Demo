@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
+      NPM_CONFIG_PRODUCTION: "false"
       QA_PLAYGROUND_URL: ${{ vars.QA_PLAYGROUND_URL || 'https://qaplayground.dev/apps/popup/' }}
 
     steps:
@@ -24,16 +25,18 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        run: npm ci --include=dev
+        run: npm ci
 
-      - name: Verify Playwright package
-        run: npx playwright --version
+      - name: Verify local Playwright dependency
+        run: |
+          npm ls @playwright/test
+          npm exec playwright -- --version
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npm exec playwright -- install --with-deps chromium
 
       - name: Run QA Playground test
-        run: npx playwright test tests/qaplayground.spec.ts --project=chrome
+        run: npm exec playwright -- test tests/qaplayground.spec.ts --project=chrome
 
       - name: Upload Playwright HTML report
         if: always()
