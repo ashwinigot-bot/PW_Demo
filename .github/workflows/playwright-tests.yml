@@ -31,6 +31,14 @@ jobs:
           npm install -g npm@9 || true
           echo "npm after optional pin: $(npm -v)"
 
+          # Corporate-generated lockfiles may embed internal Artifactory tarball URLs.
+          # Rewrite them for GitHub-hosted runners so npm can resolve packages publicly.
+          if [ -f package-lock.json ]; then
+            sed -i 's#https://artifactory\.srv\.westpac\.com\.au/artifactory/api/npm/wdp-001_npm_virtual/#https://registry.npmjs.org/#g' package-lock.json
+          fi
+
+          npm config set registry https://registry.npmjs.org/
+
           if [ -f package-lock.json ]; then
             install_cmd="npm ci --prefer-offline --no-audit --progress=false"
           else
