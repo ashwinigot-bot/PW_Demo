@@ -83,11 +83,14 @@ export default class JiraFailureReporter implements Reporter {
       return;
     }
 
-    if (this.createdForTestIds.has(test.id)) {
+    // Create Jira issue only for final failure after all retries are exhausted.
+    if (result.retry < test.retries) {
       return;
     }
 
-    this.createdForTestIds.add(test.id);
+    if (this.createdForTestIds.has(test.id)) {
+      return;
+    }
 
     const tcid = extractTCIDFromTitle(test.title);
     const browser = test.parent.project()?.name ?? 'unknown';
@@ -108,14 +111,25 @@ export default class JiraFailureReporter implements Reporter {
     try {
       const issue = await createJiraBug(jiraConfig, summary, description);
       this.jiraIssueByTestId.set(test.id, issue.key);
+      this.createdForTestIds.add(test.id);
 
       const attachmentPaths = pickAttachmentPaths(result);
       for (const attachmentPath of attachmentPaths) {
-        await addAttachmentToIssue(jiraConfig, issue.key, attachmentPath);
+        try {
+          await addAttachmentToIssue(jiraConfig, issue.key, attachmentPath);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(`[jira] Attachment upload failed for ${issue.key} (${path.basename(attachmentPath)}): ${message}`);
+        }
       }
 
       if (jiraConfig.parentIssueKey) {
-        await addIssueLink(jiraConfig, issue.key, jiraConfig.parentIssueKey);
+        try {
+          await addIssueLink(jiraConfig, issue.key, jiraConfig.parentIssueKey);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(`[jira] Issue link failed for ${issue.key} -> ${jiraConfig.parentIssueKey}: ${message}`);
+        }
       }
 
       console.log(`[jira] Created Jira issue ${issue.key} for failed test '${fullTitle}'.`);

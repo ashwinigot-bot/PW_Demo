@@ -7,6 +7,34 @@ interface JiraIssue {
   self: string;
 }
 
+interface JiraIssueType {
+  id: string;
+  name: string;
+}
+
+interface JiraCreateMetaResponse {
+  projects: Array<{
+    key: string;
+    issuetypes: JiraIssueType[];
+  }>;
+}
+
+interface JiraAdfTextNode {
+  type: 'text';
+  text: string;
+}
+
+interface JiraAdfParagraphNode {
+  type: 'paragraph';
+  content: JiraAdfTextNode[];
+}
+
+interface JiraAdfDocument {
+  type: 'doc';
+  version: 1;
+  content: JiraAdfParagraphNode[];
+}
+
 function buildAuthHeader(config: JiraConfig): string {
   const token = Buffer.from(`${config.email}:${config.apiToken}`).toString('base64');
   return `Basic ${token}`;
@@ -35,7 +63,12 @@ async function jiraRequest<T>(
     return undefined as T;
   }
 
-  return (await response.json()) as T;
+  const rawBody = await response.text();
+  if (!rawBody.trim()) {
+    return undefined as T;
+  }
+
+  return JSON.parse(rawBody) as T;
 }
 
 export async function createJiraBug(
@@ -43,20 +76,56 @@ export async function createJiraBug(
   summary: string,
   description: string
 ): Promise<JiraIssue> {
+  const issueTypesMeta = await jiraRequest<JiraCreateMetaResponse>(
+    config,
+    `/rest/api/3/issue/createmeta?projectKeys=${encodeURIComponent(config.projectKey)}&expand=projects.issuetypes`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: buildAuthHeader(config),
+        Accept: 'application/json'
+      }
+    },
+    200
+  );
+
+  const issueTypes = issueTypesMeta.projects[0]?.issuetypes ?? [];
+  const byName = (name: string) => issueTypes.find((type) => type.name.toLowerCase() === name.toLowerCase());
+
+  const selectedIssueType =
+    byName(config.issueType) ?? byName('Bug') ?? byName('Task') ?? byName('Story') ?? issueTypes[0];
+
+  if (!selectedIssueType) {
+    throw new Error(`No issue types are available for Jira project '${config.projectKey}'.`);
+  }
+
+  const descriptionDoc: JiraAdfDocument = {
+    type: 'doc',
+    version: 1,
+    content: description
+      .split(/\r?\n\r?\n/)
+      .map((block) => block.trim())
+      .filter((block) => block.length > 0)
+      .map((block) => ({
+        type: 'paragraph',
+        content: [{ type: 'text', text: block }]
+      }))
+  };
+
   const fields: Record<string, unknown> = {
     project: { key: config.projectKey },
     summary,
-    description,
-    issuetype: { name: config.issueType }
+    description: descriptionDoc,
+    issuetype: { id: selectedIssueType.id }
   };
 
   if (config.assigneeAccountId) {
-    fields.assignee = { id: config.assigneeAccountId };
+    fields.assignee = { accountId: config.assigneeAccountId };
   }
 
   return jiraRequest<JiraIssue>(
     config,
-    '/rest/api/2/issue',
+    '/rest/api/3/issue',
     {
       method: 'POST',
       headers: {
@@ -77,7 +146,7 @@ export async function addIssueLink(
 ): Promise<void> {
   await jiraRequest<void>(
     config,
-    '/rest/api/2/issueLink',
+    '/rest/api/3/issueLink',
     {
       method: 'POST',
       headers: {
@@ -108,7 +177,7 @@ export async function addAttachmentToIssue(
 
   await jiraRequest<unknown>(
     config,
-    `/rest/api/2/issue/${issueKey}/attachments`,
+    `/rest/api/3/issue/${issueKey}/attachments`,
     {
       method: 'POST',
       headers: {
