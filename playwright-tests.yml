@@ -1,0 +1,121 @@
+name: Playwright Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      NPM_CONFIG_PRODUCTION: "false"
+      QA_PLAYGROUND_URL: ${{ vars.QA_PLAYGROUND_URL || 'https://qaplayground.dev/apps/popup/' }}
+      JIRA_ENABLED: "true"
+      JIRA_BASE_URL: ${{ vars.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_PROJECT_KEY: ${{ vars.JIRA_PROJECT_KEY }}
+      JIRA_ISSUE_TYPE: ${{ vars.JIRA_ISSUE_TYPE || 'Bug' }}
+      JIRA_PARENT_ISSUE_KEY: ${{ vars.JIRA_PARENT_ISSUE_KEY }}
+      JIRA_ASSIGNEE_ACCOUNT_ID: ${{ vars.JIRA_ASSIGNEE_ACCOUNT_ID }}
+      FORCE_JIRA_FAILURE: ${{ vars.FORCE_JIRA_FAILURE || 'false' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: |
+          echo "Node: $(node -v)"
+          echo "npm: $(npm -v)"
+          npm install -g npm@9 || true
+          echo "npm after optional pin: $(npm -v)"
+
+          # Corporate-generated lockfiles may embed internal Artifactory tarball URLs.
+          # Rewrite them for GitHub-hosted runners so npm can resolve packages publicly.
+          if [ -f package-lock.json ]; then
+            sed -i 's#https://artifactory\.srv\.westpac\.com\.au/artifactory/api/npm/wdp-001_npm_virtual/#https://registry.npmjs.org/#g' package-lock.json
+          fi
+
+          npm config set registry https://registry.npmjs.org/
+
+          if [ -f package-lock.json ]; then
+            install_cmd="npm ci --prefer-offline --no-audit --progress=false"
+          else
+            install_cmd="npm install --prefer-offline --no-audit --progress=false"
+          fi
+
+          for attempt in 1 2 3; do
+            echo "Attempt ${attempt}: ${install_cmd}"
+            if ${install_cmd}; then
+              echo "Dependency install succeeded"
+              exit 0
+            fi
+
+            echo "Dependency install failed on attempt ${attempt}"
+            if [ "${attempt}" -lt 3 ]; then
+              sleep 5
+            fi
+          done
+
+          echo "Dependency install failed after retries"
+          ls -la /home/runner/.npm/_logs || true
+          exit 1
+        env:
+          CI: true
+
+      - name: Upload npm debug logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-debug-logs
+          path: /home/runner/.npm/_logs
+          if-no-files-found: warn
+
+      - name: Verify local Playwright dependency
+        run: |
+          npm ls @playwright/test
+          npm exec playwright -- --version
+
+      - name: Install Playwright browsers
+        run: npm exec playwright -- install --with-deps chromium
+
+      - name: Run QA Playground test
+        run: npm exec playwright -- test tests/qaplayground.spec.ts --project=chrome
+
+      - name: Upload Playwright HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: reports/html
+          if-no-files-found: warn
+
+      - name: Upload test-results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: test-results
+          if-no-files-found: warn
+
+      - name: Upload raw artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-raw-artifacts
+          path: |
+            reports/artifacts
+            reports/blob
+          if-no-files-found: warn
+
+
